@@ -2,159 +2,226 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-width=1.0">
-    <title>Live Chart & Auto Technical Analysis</title>
+    <!-- Meta viewport khusus iOS: mencegah zoom otomatis dan mendukung area layar penuh (Dynamic Island) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#131722">
+    <title>Trading Setup Mobile</title>
     <style>
+        :root {
+            --bg-main: #131722;
+            --bg-card: #1e222d;
+            --border: #2a2e39;
+            --text-main: #d1d4dc;
+            --text-muted: #787b86;
+            --blue-accent: #2962ff;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #131722; /* Dark theme default */
-            color: #d1d4dc;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            /* Padding khusus Apple Safe Area (Dynamic Island & Home Indicator) */
+            padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom) 16px;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Panel Kontrol Atas (Grid Layout 2 Kolom untuk iPhone) */
+        .controls-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 16px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .input-wrapper {
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            box-sizing: border-box;
+            gap: 6px;
         }
-        .controls {
-            display: flex;
-            gap: 15px;
-            background: #1e222d;
-            padding: 15px 20px;
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Font 16px wajib di iOS agar tidak auto-zoom */
+        input[type="text"], select {
+            width: 100%;
+            height: 44px;
+            padding: 0 12px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            color: #fff;
             border-radius: 8px;
+            font-size: 16px; 
+            font-weight: bold;
+            box-sizing: border-box;
+            outline: none;
+            text-transform: uppercase;
+            appearance: none; /* Menghilangkan panah default browser di select */
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: var(--blue-accent);
+        }
+
+        .btn-analyze {
+            grid-column: span 2;
+            height: 48px;
+            background-color: var(--blue-accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+
+        .btn-analyze:active {
+            background-color: #1e53e5;
+            transform: scale(0.98);
+        }
+
+        /* Container Komponen / Widget */
+        .widget-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            border: 1px solid var(--border);
             margin-bottom: 20px;
-            align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            flex-wrap: wrap;
+            overflow: hidden;
+            width: 100%;
         }
-        .input-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+
+        .widget-header {
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border);
+            color: #fff;
         }
-        label { font-size: 14px; font-weight: 600; }
-        input[type="text"] {
-            padding: 8px 12px; border: 1px solid #2a2e39; background: #131722;
-            color: #fff; border-radius: 4px; text-transform: uppercase;
-            width: 150px; font-weight: bold;
-        }
-        select {
-            padding: 8px 12px; border: 1px solid #2a2e39; background: #131722;
-            color: #fff; border-radius: 4px; cursor: pointer;
-        }
-        button {
-            background-color: #2962ff; color: white; border: none;
-            padding: 9px 20px; border-radius: 4px; cursor: pointer;
-            font-weight: bold; transition: background 0.2s;
-        }
-        button:hover { background-color: #1e53e5; }
-        
-        .main-content {
-            display: flex; gap: 20px; flex-grow: 1; height: 100%;
-        }
-        #chart-container {
-            flex: 7; border-radius: 8px; overflow: hidden; border: 1px solid #2a2e39;
-        }
-        #analysis-container {
-            flex: 3; border-radius: 8px; overflow: hidden; border: 1px solid #2a2e39;
-            background: #1e222d; display: flex; flex-direction: column;
-        }
-        .note { font-size: 12px; color: #787b86; margin-left: auto; }
+
+        /* Penyesuaian Tinggi Khusus Layar iPhone 14 Pro */
+        #chart-container { height: 45vh; min-height: 380px; }
+        #ta-container { height: 400px; }
+        #profile-container { height: 350px; }
+
     </style>
 </head>
 <body>
 
-    <div class="controls">
-        <div class="input-group">
-            <label for="ticker">Emiten / Pair:</label>
-            <input type="text" id="ticker" value="IDX:GOTO" placeholder="Cth: IDX:BBCA">
+    <!-- Panel Input -->
+    <div class="controls-card">
+        <div class="input-wrapper">
+            <label>Emiten</label>
+            <input type="text" id="ticker" value="IDX:BBRI" placeholder="Cth: GOTO">
         </div>
-        
-        <div class="input-group">
-            <label for="timeframe">Periode View:</label>
+        <div class="input-wrapper">
+            <label>Timeframe</label>
             <select id="timeframe">
                 <option value="15">15 Menit</option>
                 <option value="60">1 Jam</option>
                 <option value="240">4 Jam</option>
-                <option value="D" selected>1 Hari (Daily)</option>
-                <option value="W">1 Minggu</option>
-                <option value="M">1 Bulan</option>
+                <option value="1D" selected>1 Hari (Daily)</option>
+                <option value="1W">1 Minggu</option>
             </select>
         </div>
-
-        <button onclick="updateWidgets()">Tampilkan & Analisis</button>
-        
-        <div class="note">
-            Gunakan format <b>IDX:KODE</b> (cth: IDX:HEXA, IDX:BBRI).
-        </div>
+        <button class="btn-analyze" onclick="updateWidgets()">Analisis Sekarang</button>
     </div>
 
-    <div class="main-content">
-        <!-- Container Grafik -->
+    <!-- 1. Grafik Chart (Diubah tingginya agar proporsional di layar HP) -->
+    <div class="widget-card">
         <div id="chart-container"></div>
-        
-        <!-- Container Analisis Teknikal -->
-        <div id="analysis-container"></div>
+    </div>
+
+    <!-- 2. Speedometer Analisis -->
+    <div class="widget-card">
+        <div class="widget-header">📊 Sinyal Analisis Teknikal</div>
+        <div id="ta-container"></div>
+    </div>
+
+    <!-- 3. Profil Fundamental -->
+    <div class="widget-card">
+        <div class="widget-header">🏢 Ringkasan Bisnis & Fundamental</div>
+        <div id="profile-container"></div>
     </div>
 
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <script>
         function updateWidgets() {
-            const tickerInput = document.getElementById('ticker').value.toUpperCase().trim();
-            const timeframeInput = document.getElementById('timeframe').value;
+            const ticker = document.getElementById('ticker').value.toUpperCase().trim();
+            let timeframe = document.getElementById('timeframe').value;
+            
+            let chartTimeframe = timeframe;
+            if (timeframe === "1D") chartTimeframe = "D";
+            if (timeframe === "1W") chartTimeframe = "W";
+            if (timeframe === "1M") chartTimeframe = "M";
 
-            // 1. Update Grafik Candlestick
+            // 1. Render Chart Mobile
             document.getElementById('chart-container').innerHTML = '';
             new TradingView.widget({
                 "autosize": true,
-                "symbol": tickerInput,
-                "interval": timeframeInput,
+                "symbol": ticker,
+                "interval": chartTimeframe,
                 "timezone": "Asia/Jakarta",
-                "theme": "dark", 
-                "style": "1", 
+                "theme": "dark", // Memaksa Dark Mode agar hemat baterai OLED
+                "style": "1",
                 "locale": "id",
                 "enable_publishing": false,
-                "backgroundColor": "#131722",
-                "gridColor": "#2a2e39",
                 "hide_top_toolbar": false,
-                "hide_legend": false,
+                "hide_legend": true, // Disembunyikan agar layar HP tidak penuh
                 "save_image": false,
                 "container_id": "chart-container",
-                "toolbar_bg": "#1e222d",
-                "withdateranges": true,
-                "allow_symbol_change": true,
-                "studies": ["EMA@tv-basicstudies"] 
+                "studies": ["EMA@tv-basicstudies"]
             });
 
-            // 2. Mapping format waktu untuk Widget Analisis
-            // Chart menggunakan D/W/M, sedangkan Analisis menggunakan 1D/1W/1M
-            let taTimeframe = timeframeInput;
-            if (timeframeInput === "D") taTimeframe = "1D";
-            if (timeframeInput === "W") taTimeframe = "1W";
-            if (timeframeInput === "M") taTimeframe = "1M";
-
-            // 3. Update Widget Analisis Speedometer
-            const analysisContainer = document.getElementById('analysis-container');
-            analysisContainer.innerHTML = ''; 
-            
+            // 2. Render Technical Analysis Speedometer
+            const taContainer = document.getElementById('ta-container');
+            taContainer.innerHTML = ''; 
             const taScript = document.createElement('script');
             taScript.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
             taScript.async = true;
             taScript.innerHTML = JSON.stringify({
-                "interval": taTimeframe,
+                "interval": timeframe,
                 "width": "100%",
                 "isTransparent": true,
                 "height": "100%",
-                "symbol": tickerInput,
-                "showIntervalTabs": false, // Dimatikan agar tersinkronisasi dengan dropdown
+                "symbol": ticker,
+                "showIntervalTabs": false,
                 "displayMode": "single",
                 "locale": "id",
                 "colorTheme": "dark"
             });
-            analysisContainer.appendChild(taScript);
+            taContainer.appendChild(taScript);
+
+            // 3. Render Profil Emiten
+            const profileContainer = document.getElementById('profile-container');
+            profileContainer.innerHTML = ''; 
+            const profileScript = document.createElement('script');
+            profileScript.src = 'https://s3.tradingview.com/external-embedding/embed-widget-symbol-profile.js';
+            profileScript.async = true;
+            profileScript.innerHTML = JSON.stringify({
+                "width": "100%",
+                "height": "100%",
+                "colorTheme": "dark",
+                "isTransparent": true,
+                "symbol": ticker,
+                "locale": "id"
+            });
+            profileContainer.appendChild(profileScript);
         }
 
-        // Render otomatis saat web dibuka
+        // Jalankan saat web dimuat pertama kali
         updateWidgets();
     </script>
 </body>
