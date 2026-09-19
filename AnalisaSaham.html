@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>Live Chart & Auto Technical Analysis</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #131722; /* Dark theme default */
+            color: #d1d4dc;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            background: #1e222d;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            flex-wrap: wrap;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        label { font-size: 14px; font-weight: 600; }
+        input[type="text"] {
+            padding: 8px 12px; border: 1px solid #2a2e39; background: #131722;
+            color: #fff; border-radius: 4px; text-transform: uppercase;
+            width: 150px; font-weight: bold;
+        }
+        select {
+            padding: 8px 12px; border: 1px solid #2a2e39; background: #131722;
+            color: #fff; border-radius: 4px; cursor: pointer;
+        }
+        button {
+            background-color: #2962ff; color: white; border: none;
+            padding: 9px 20px; border-radius: 4px; cursor: pointer;
+            font-weight: bold; transition: background 0.2s;
+        }
+        button:hover { background-color: #1e53e5; }
+        
+        .main-content {
+            display: flex; gap: 20px; flex-grow: 1; height: 100%;
+        }
+        #chart-container {
+            flex: 7; border-radius: 8px; overflow: hidden; border: 1px solid #2a2e39;
+        }
+        #analysis-container {
+            flex: 3; border-radius: 8px; overflow: hidden; border: 1px solid #2a2e39;
+            background: #1e222d; display: flex; flex-direction: column;
+        }
+        .note { font-size: 12px; color: #787b86; margin-left: auto; }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <div class="input-group">
+            <label for="ticker">Emiten / Pair:</label>
+            <input type="text" id="ticker" value="IDX:GOTO" placeholder="Cth: IDX:BBCA">
+        </div>
+        
+        <div class="input-group">
+            <label for="timeframe">Periode View:</label>
+            <select id="timeframe">
+                <option value="15">15 Menit</option>
+                <option value="60">1 Jam</option>
+                <option value="240">4 Jam</option>
+                <option value="D" selected>1 Hari (Daily)</option>
+                <option value="W">1 Minggu</option>
+                <option value="M">1 Bulan</option>
+            </select>
+        </div>
+
+        <button onclick="updateWidgets()">Tampilkan & Analisis</button>
+        
+        <div class="note">
+            Gunakan format <b>IDX:KODE</b> (cth: IDX:HEXA, IDX:BBRI).
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Container Grafik -->
+        <div id="chart-container"></div>
+        
+        <!-- Container Analisis Teknikal -->
+        <div id="analysis-container"></div>
+    </div>
+
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script>
+        function updateWidgets() {
+            const tickerInput = document.getElementById('ticker').value.toUpperCase().trim();
+            const timeframeInput = document.getElementById('timeframe').value;
+
+            // 1. Update Grafik Candlestick
+            document.getElementById('chart-container').innerHTML = '';
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": tickerInput,
+                "interval": timeframeInput,
+                "timezone": "Asia/Jakarta",
+                "theme": "dark", 
+                "style": "1", 
+                "locale": "id",
+                "enable_publishing": false,
+                "backgroundColor": "#131722",
+                "gridColor": "#2a2e39",
+                "hide_top_toolbar": false,
+                "hide_legend": false,
+                "save_image": false,
+                "container_id": "chart-container",
+                "toolbar_bg": "#1e222d",
+                "withdateranges": true,
+                "allow_symbol_change": true,
+                "studies": ["EMA@tv-basicstudies"] 
+            });
+
+            // 2. Mapping format waktu untuk Widget Analisis
+            // Chart menggunakan D/W/M, sedangkan Analisis menggunakan 1D/1W/1M
+            let taTimeframe = timeframeInput;
+            if (timeframeInput === "D") taTimeframe = "1D";
+            if (timeframeInput === "W") taTimeframe = "1W";
+            if (timeframeInput === "M") taTimeframe = "1M";
+
+            // 3. Update Widget Analisis Speedometer
+            const analysisContainer = document.getElementById('analysis-container');
+            analysisContainer.innerHTML = ''; 
+            
+            const taScript = document.createElement('script');
+            taScript.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+            taScript.async = true;
+            taScript.innerHTML = JSON.stringify({
+                "interval": taTimeframe,
+                "width": "100%",
+                "isTransparent": true,
+                "height": "100%",
+                "symbol": tickerInput,
+                "showIntervalTabs": false, // Dimatikan agar tersinkronisasi dengan dropdown
+                "displayMode": "single",
+                "locale": "id",
+                "colorTheme": "dark"
+            });
+            analysisContainer.appendChild(taScript);
+        }
+
+        // Render otomatis saat web dibuka
+        updateWidgets();
+    </script>
+</body>
+</html>
